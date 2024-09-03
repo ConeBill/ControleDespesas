@@ -17,18 +17,6 @@ class Despesa {
         if (!dados.valor || isNaN(Number(dados.valor))) {
             erros.push("O campo 'valor' é obrigatório e deve ser um número.");
         }
-        if (!dados.status || (dados.status !== 'Em dia' && dados.status !== 'Atrasado')) {
-            erros.push("O campo 'status' é obrigatório e deve ser 'Em dia' ou 'Atrasado'.");
-        }
-        if (!dados.pago || (dados.pago !== 'S' && dados.pago !== 'N')) {
-            erros.push("O campo 'pago' é obrigatório e deve ser 'S' ou 'N'.");
-        }
-        if (!dados.numeroParcelas || typeof dados.numeroParcelas !== 'string') {
-            erros.push("O campo 'numeroParcelas' deve ser uma string.");
-        }
-        if (!dados.diaVencimento || typeof dados.diaVencimento !== 'string') {
-            erros.push("O campo 'diaVencimento' deve ser uma string.");
-        }
 
         return erros;
     }
