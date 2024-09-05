@@ -3,10 +3,10 @@ const app = express();
 const cors = require('cors');
 const despesasRoutes = require('./routes/despesas');
 
-const PORTA = 3001;
+const PORTA = process.env.PORT || 3001;
 
 app.use(cors({
-    origin: 'http://localhost:5173'
+    origin: process.env.ORIGIN
 }));
 
 app.use(express.json());
