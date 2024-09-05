@@ -11,6 +11,9 @@ app.use(cors({
 
 app.use(express.json());
 app.use('/despesas', despesasRoutes);
+app.use('/', (req, res) => {
+    res.json({"mgs": "Hello World"});
+});
 
 app.listen(PORTA, () => {
     console.log(`Servidor rodando na porta ${PORTA}`);
