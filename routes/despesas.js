@@ -9,6 +9,13 @@ router.get('/', (req, res) => {
     res.json(despesas);
 });
 
+// Obtendo todas as despesas passivas de pagamento
+router.get('/get', (req, res) => {
+    const despesas = lerDadosDoArquivo();
+    console.log(despesas);
+    res.json(despesas);
+})
+
 // Adicionar uma nova despesa
 router.post('/', (req, res) => {
     const novaDespesa = req.body;
