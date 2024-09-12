@@ -1,11 +1,13 @@
 class Despesa {
-    constructor({ nome, valor, status, pago, numeroParcelas, diaVencimento }) {
+    constructor({ id, nome, valor, status, pago, numeroParcelas, diaVencimento, diaPagamento }) {
+        this.id = id;
         this.nome = nome;
         this.valor = valor;
-        this.status = status || 'Em dia';
+        this.status = status;
         this.pago = pago || 'N';
-        this.numeroParcelas = numeroParcelas || '-';
-        this.diaVencimento = diaVencimento || '-';
+        this.numeroParcelas = numeroParcelas || 1;
+        this.diaVencimento = diaVencimento || null;
+        this.diaPagamento = diaPagamento || null;
     }
 
     static validar(dados) {
