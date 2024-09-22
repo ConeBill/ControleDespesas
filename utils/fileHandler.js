@@ -34,9 +34,5 @@ const ordenarPorDataMaisProxima = (despesas, dataReferencia) => {
     });
 };
 
-// Função para escrever os dados no arquivo
-function escreverDadosNoArquivo(dados) {
-    fs.writeFileSync(caminhoArquivo, JSON.stringify(dados, null, 2), 'utf-8');
-}
 
-module.exports = { lerDadosDoArquivo, escreverDadosNoArquivo, buscarPorCampo, ordenarPorDataMaisProxima };
+module.exports = { lerDadosDoArquivo, buscarPorCampo, ordenarPorDataMaisProxima };

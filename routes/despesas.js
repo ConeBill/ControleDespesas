@@ -1,15 +1,51 @@
 const express = require('express');
 const router = express.Router();
-const { lerDadosDoArquivo, escreverDadosNoArquivo, buscarPorCampo, ordenarPorDataMaisProxima } = require('../utils/fileHandler');
-const Despesa = require('../model/despesaModel');
+const Guia = require('../model/guiaModel');
+const Parcela = require('../model/parcelaModel');
+
+// Adicionar uma nova guia
+router.post('/', async (req, res) => {
+    //Guia
+    const Nome = req.body.Descr;
+    const IdOrigem = req.body.IdOrigem;
+    const SetorOrigem = req.body.SetorOrigem;
+    //Parcela
+    const NroParcela = req.body.NroParcela;
+    const DtVencimento = req.body.DtVencimento;
+    const Situacao = req.body.Situacao;
+    const VlrTarifa = req.body.VlrTarifa;
+
+    try {
+        const novaGuia = await Guia.create({
+            IdOrigem: IdOrigem,
+            SetorOrigem: SetorOrigem,
+            Descr: Nome
+        });
+        try {
+            const novaParcela = await Parcela.create({
+                IdGuia: novaGuia.IdGuia,
+                NroParcela: NroParcela,
+                DtVencimento: DtVencimento,
+                Situacao: Situacao,
+                VlrTarifa: VlrTarifa
+            });
+            res.status(201).json({ msg: 'Sucesso ao criar guia' });
+        } catch (error) {
+            res.status(400).json({ error: 'Erro ao criar parcelas', detalhes: error });
+        }
+    } catch (error) {
+        res.status(400).json({ error: 'Erro ao criar guia', detalhes: error });
+    }
+});
 
 // Obter todas as despesas
 router.get('/', (req, res) => {
     const despesas = lerDadosDoArquivo();
     if(despesas)
-    res.json(despesas);
+        res.json(despesas);
 });
 
+/*
 // Obtendo todas as despesas passivas de pagamento
 router.get('/get', (req, res) => {
     const despesas = lerDadosDoArquivo();
@@ -24,27 +60,6 @@ router.get('/getForDate', (req, res) => {
     const despesasOrder = ordenarPorDataMaisProxima(despesas, dataReferencia);
     res.json(despesasOrder);
 })
-
-// Adicionar uma nova despesa
-router.post('/', (req, res) => {
-    const novaDespesa = req.body;
-
-    const erros = Despesa.validar(novaDespesa);
-    if (erros.length > 0) {
-        return res.status(400).json({ erros });
-    }
-
-    const despesa = new Despesa(novaDespesa);
-    const despesas = lerDadosDoArquivo();
-    despesas.push(despesa);
-    escreverDadosNoArquivo(despesas);
-
-    res.status(201).json({
-        despesa: despesa,
-        msg: "Sucesso"
-    });
- 
-});
 
 // Atualizar uma despesa
 router.put('/:nome', (req, res) => {
@@ -63,6 +78,6 @@ despesas[despesaIndex] = despesaAtualizada;
 escreverDadosNoArquivo(despesas);
 
 res.json(despesaAtualizada);
-});
+});*/
 
 module.exports = router;
