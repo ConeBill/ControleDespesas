@@ -7,4 +7,6 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
     dialect: 'mysql'
 });
 
+const { Guia, Parcela } = require('./initModels');
+
 module.exports = sequelize;

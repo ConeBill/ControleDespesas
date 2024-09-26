@@ -21,28 +21,61 @@ router.post('/', async (req, res) => {
             SetorOrigem: SetorOrigem,
             Descr: Nome
         });
-        try {
-            const novaParcela = await Parcela.create({
-                IdGuia: novaGuia.IdGuia,
-                NroParcela: NroParcela,
-                DtVencimento: DtVencimento,
-                Situacao: Situacao,
-                VlrTarifa: VlrTarifa
-            });
-            res.status(201).json({ msg: 'Sucesso ao criar guia' });
-        } catch (error) {
-            res.status(400).json({ error: 'Erro ao criar parcelas', detalhes: error });
-        }
+        if(NroParcela > 0) {
+            try {
+                let dataVencimento = new Date(DtVencimento);
+                for (let i = 0; i < NroParcela; i++) {
+                    const novaParcela = await Parcela.create({
+                        IdGuia: novaGuia.IdGuia,
+                        NroParcela: i + 1,
+                        DtVencimento: new Date(dataVencimento.setMonth(dataVencimento.getMonth() + 1)),
+                        Situacao: Situacao,
+                        VlrTarifa: VlrTarifa
+                    });
+                }
+                res.status(201).json({ msg: 'Sucesso ao criar as parcelas' });
+            } catch (error) {
+                console.log(error);
+                res.status(400).json({ error: 'Erro ao criar parcelas'});
+            }
+            } else {
+                try {
+                    const novaParcela = await Parcela.create({
+                        IdGuia: novaGuia.IdGuia,
+                        NroParcela: NroParcela,
+                        DtVencimento: DtVencimento,
+                        Situacao: Situacao,
+                        VlrTarifa: VlrTarifa
+                    });
+                    res.status(201).json({ msg: 'Sucesso ao criar parcela' });
+                } catch (error) {
+                    res.status(400).json({ error: 'Erro ao criar parcela', detalhes: error });
+                }
+            }
     } catch (error) {
         res.status(400).json({ error: 'Erro ao criar guia', detalhes: error });
     }
 });
 
 // Obter todas as despesas
-router.get('/', (req, res) => {
-    const despesas = lerDadosDoArquivo();
-    if(despesas)
-        res.json(despesas);
+router.get('/', async (req, res) => {
+    try {
+        const despesas = await Guia.findAll({
+            include: [{
+                model: Parcela,
+                as: 'parcelas' // O alias deve corresponder ao nome dado na relação
+            }]
+        });
+
+        if (despesas.length > 0) {
+            res.status(200).json(despesas);
+        } else {
+            res.status(404).json({ msg: 'Nenhuma guia encontrada' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar guias e parcelas', detalhes: error });
+    }
 });
 
 /*
