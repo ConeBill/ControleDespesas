@@ -39,10 +39,18 @@ router.post('/', async (req, res) => {
 });
 
 // Obter todas as despesas
-router.get('/', (req, res) => {
-    const despesas = lerDadosDoArquivo();
-    if(despesas)
-        res.json(despesas);
+router.get('/', async (req, res) => {
+    try {
+        const guias = await Guia.findAll({
+            include: {
+                model: Parcela,
+                as: 'parcelas' // Usar o alias definido na associação
+            }
+        });
+        res.json(guias);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar guias', detalhes: error });
+    }
 });
 
 /*

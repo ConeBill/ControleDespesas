@@ -8,7 +8,7 @@ const sequelize = require('./config/database');
 const Despesa = require('./model/guiaModel');
 
 // Sincronize o banco de dados
-sequelize.sync()
+sequelize.sync({ force: true }) // Usar com cuidado, pois recriará as tabelas e deletará os dados
     .then(() => {
         console.log('Banco de dados sincronizado');
     })
