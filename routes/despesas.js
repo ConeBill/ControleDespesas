@@ -3,6 +3,21 @@ const router = express.Router();
 const Guia = require('../model/guiaModel');
 const Parcela = require('../model/parcelaModel');
 
+// Obter todas as despesas
+router.get('/', async (req, res) => {
+    try {
+        const guias = await Guia.findAll({
+            include: {
+                model: Parcela,
+                as: 'parcelas'
+            }
+        });
+        res.json(guias);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar guias', detalhes: error });
+    }
+});
+
 // Adicionar uma nova guia
 router.post('/', async (req, res) => {
     //Guia
@@ -35,21 +50,6 @@ router.post('/', async (req, res) => {
         }
     } catch (error) {
         res.status(400).json({ error: 'Erro ao criar guia', detalhes: error });
-    }
-});
-
-// Obter todas as despesas
-router.get('/', async (req, res) => {
-    try {
-        const guias = await Guia.findAll({
-            include: {
-                model: Parcela,
-                as: 'parcelas' // Usar o alias definido na associação
-            }
-        });
-        res.json(guias);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar guias', detalhes: error });
     }
 });
 
