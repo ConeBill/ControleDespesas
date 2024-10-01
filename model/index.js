@@ -1,7 +1,6 @@
 const Guia = require('./guiaModel');
 const Parcela = require('./parcelaModel');
 
-// Defina as associações aqui
 Guia.hasMany(Parcela, {
     foreignKey: 'IdGuia',
     as: 'parcelas'

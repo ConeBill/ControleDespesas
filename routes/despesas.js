@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Guia = require('../model/guiaModel');
-const Parcela = require('../model/parcelaModel');
+const { Guia, Parcela } = require('../model/index');
 
 // Obter todas as despesas
 router.get('/', async (req, res) => {
@@ -24,7 +23,7 @@ router.post('/', async (req, res) => {
     const Nome = req.body.Descr;
     const IdOrigem = req.body.IdOrigem;
     const SetorOrigem = req.body.SetorOrigem;
-    //Parcela
+    //Parcelas
     const NroParcela = req.body.NroParcela;
     const DtVencimento = req.body.DtVencimento;
     const Situacao = req.body.Situacao;
@@ -36,20 +35,29 @@ router.post('/', async (req, res) => {
             SetorOrigem: SetorOrigem,
             Descr: Nome
         });
-        try {
-            const novaParcela = await Parcela.create({
-                IdGuia: novaGuia.IdGuia,
-                NroParcela: NroParcela,
-                DtVencimento: DtVencimento,
-                Situacao: Situacao,
-                VlrTarifa: VlrTarifa
-            });
-            res.status(201).json({ msg: 'Sucesso ao criar guia' });
-        } catch (error) {
-            res.status(400).json({ error: 'Erro ao criar parcelas', detalhes: error });
+
+        if (NroParcela > 0) {
+            const parcelas = [];
+
+            for (let i = 1; i <= NroParcela; i++) {
+                const novaParcela = {
+                    IdGuia: novaGuia.IdGuia,
+                    NroParcela: i,
+                    DtVencimento: new Date(new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + (i - 1))),
+                    Situacao: Situacao,
+                    VlrTarifa: VlrTarifa
+                };
+                parcelas.push(novaParcela);
+            }
+
+            await Parcela.bulkCreate(parcelas);
+
+            res.status(201).json({ msg: 'Guia e parcelas criadas com sucesso!' });
+        } else {
+            res.status(400).json({ error: 'O número de parcelas deve ser maior que 0' });
         }
     } catch (error) {
-        res.status(400).json({ error: 'Erro ao criar guia', detalhes: error });
+        res.status(400).json({ error: 'Erro ao criar guia ou parcelas', detalhes: error });
     }
 });
 
