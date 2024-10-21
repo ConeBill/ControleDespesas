@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { QueryTypes } = require('sequelize');
 const { Guia, Parcela } = require('../model/index');
+const sequelize = require('../config/database')
 
 // Obter todas as despesas
 router.get('/', async (req, res) => {
@@ -16,6 +18,27 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: 'Erro ao buscar guias', detalhes: error });
     }
 });
+
+//Pegando as despesas aptas a pagamentos
+router.get('/pagar', async (req, res) => {
+    try {
+        const guias = await sequelize.query(
+            `SELECT * 
+             FROM guias G 
+             JOIN parcelas P ON P.IdGuia = G.IdGuia 
+             WHERE MONTH(P.DtVencimento) = MONTH(CURDATE()) 
+             AND YEAR(P.DtVencimento) = YEAR(CURDATE()) 
+             AND P.DtVencimento > CURDATE()`,
+            {
+                type: QueryTypes.SELECT,
+            }
+        );
+        res.status(200).json(guias);
+    } catch (error) {
+        console.log('Erro ao buscar guias:', error);
+        res.status(500).json({ error: 'Erro ao buscar guias' });
+    }
+})
 
 // Adicionar uma nova guia
 router.post('/', async (req, res) => {
