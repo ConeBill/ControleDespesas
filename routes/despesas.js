@@ -2,34 +2,60 @@ const express = require('express');
 const router = express.Router();
 const { QueryTypes } = require('sequelize');
 const { Guia, Parcela } = require('../model/index');
-const sequelize = require('../config/database')
+const sequelize = require('../config/database');
 
-// Obter todas as despesas
+// Obter todas as despesas do usuário
 router.get('/', async (req, res) => {
     try {
-        const guias = await Guia.findAll({
-            include: {
-                model: Parcela,
-                as: 'parcelas'
+        const { idUser } = req.query;
+        if (!idUser ) {
+            return res.status(400).json({ error: 'IdUsuario é obrigatório' });
+        }
+
+        const guias = await sequelize.query(
+            `SELECT * 
+             FROM guias G 
+             JOIN parcelas P ON P.IdGuia = G.IdGuia 
+             WHERE G.IdOrigem = :idUser
+             AND G.SetorOrigem = 'Usuarios'
+             ORDER BY G.IdGuia DESC`,
+            {
+                replacements: { 
+                    idUser: idUser
+                },
+                type: QueryTypes.SELECT,
             }
-        });
-        res.json(guias);
+        );
+        res.status(201).json(guias);
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar guias', detalhes: error });
+        console.log('Erro ao buscar guias:', error);
+        res.status(500).json({ error: 'Erro ao buscar guias' });
     }
 });
 
 //Pegando as despesas aptas a pagamentos
 router.get('/pagar', async (req, res) => {
     try {
+        const { idUser, currentDate } = req.query;
+        if (!idUser || !currentDate) {
+            return res.status(400).json({ error: 'IdUsuario e currentDate são obrigatórios' });
+        }
+
         const guias = await sequelize.query(
             `SELECT * 
              FROM guias G 
              JOIN parcelas P ON P.IdGuia = G.IdGuia 
-             WHERE MONTH(P.DtVencimento) = MONTH(CURDATE()) 
-             AND YEAR(P.DtVencimento) = YEAR(CURDATE()) 
-             AND P.DtVencimento > CURDATE()`,
+             WHERE G.IdOrigem = :idUser
+             AND G.SetorOrigem = 'Usuarios'
+             AND MONTH(P.DtVencimento) = MONTH(:currentDate) 
+             AND YEAR(P.DtVencimento) = YEAR(:currentDate) 
+             AND P.DtVencimento > :currentDate
+             ORDER BY G.IdGuia DESC`,
             {
+                replacements: { 
+                    idUser: idUser, 
+                    currentDate: currentDate 
+                },
                 type: QueryTypes.SELECT,
             }
         );
@@ -38,7 +64,8 @@ router.get('/pagar', async (req, res) => {
         console.log('Erro ao buscar guias:', error);
         res.status(500).json({ error: 'Erro ao buscar guias' });
     }
-})
+});
+
 
 // Adicionar uma nova guia
 router.post('/', async (req, res) => {
@@ -52,6 +79,9 @@ router.post('/', async (req, res) => {
     const Situacao = req.body.Situacao;
     const VlrTarifa = req.body.VlrTarifa;
 
+    //Juros caso tenha
+    const VlrJuros = req.body.VlrJuros;
+
     try {
         const novaGuia = await Guia.create({
             IdOrigem: IdOrigem,
@@ -59,64 +89,34 @@ router.post('/', async (req, res) => {
             Descr: Nome
         });
 
-        if (NroParcela > 0) {
-            const parcelas = [];
+        if (NroParcela > 1) {
+            let parcelas = [];
+            let valorParcela = VlrTarifa / NroParcela;
 
-            for (let i = 1; i <= NroParcela; i++) {
-                const novaParcela = {
+            for (let i = 1; i < NroParcela; i++) {
+                let valorComJuros = valorParcela + (valorParcela * (VlrJuros / 100) * i);
+                parcelas.push({
                     IdGuia: novaGuia.IdGuia,
-                    NroParcela: i,
-                    DtVencimento: new Date(new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + (i - 1))),
+                    NroParcela: i + 1,
+                    DtVencimento: new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + i),
                     Situacao: Situacao,
-                    VlrTarifa: VlrTarifa
-                };
-                parcelas.push(novaParcela);
+                    VlrTarifa: valorComJuros
+                });
             }
-
             await Parcela.bulkCreate(parcelas);
-
-            res.status(201).json({ msg: 'Guia e parcelas criadas com sucesso!' });
         } else {
-            res.status(400).json({ error: 'O número de parcelas deve ser maior que 0' });
+            await Parcela.create({
+                GuiaId: novaGuia.id,
+                NroParcela: 1,
+                DtVencimento: DtVencimento,
+                Situacao: Situacao,
+                VlrTarifa: VlrTarifa
+            });
         }
+        return res.status(201).json({ message: 'Guia e parcelas criadas com sucesso.' });
     } catch (error) {
         res.status(400).json({ error: 'Erro ao criar guia ou parcelas', detalhes: error });
     }
 });
-
-/*
-// Obtendo todas as despesas passivas de pagamento
-router.get('/get', (req, res) => {
-    const despesas = lerDadosDoArquivo();
-    const resultadoBusca = buscarPorCampo(despesas, 'pago', 'N');
-    res.json(resultadoBusca);
-})
-
-// Obtendo todas as despesas por data
-router.get('/getForDate', (req, res) => {
-    const despesas = lerDadosDoArquivo();
-    const dataReferencia = req.body.dataSelecionada;
-    const despesasOrder = ordenarPorDataMaisProxima(despesas, dataReferencia);
-    res.json(despesasOrder);
-})
-
-// Atualizar uma despesa
-router.put('/:nome', (req, res) => {
-const { nome } = req.params;
-const updates = req.body;
-
-const despesas = lerDadosDoArquivo();
-const despesaIndex = despesas.findIndex(d => d.nome === nome);
-
-if (despesaIndex === -1) {
-    return res.status(404).json({ error: 'Despesa não encontrada' });
-}
-
-const despesaAtualizada = { ...despesas[despesaIndex], ...updates };
-despesas[despesaIndex] = despesaAtualizada;
-escreverDadosNoArquivo(despesas);
-
-res.json(despesaAtualizada);
-});*/
 
 module.exports = router;

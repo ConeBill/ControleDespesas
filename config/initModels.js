@@ -4,4 +4,4 @@ const Parcela = require('../model/parcelaModel');
 Guia.hasMany(Parcela, { foreignKey: 'IdGuia' });
 Parcela.belongsTo(Guia, { foreignKey: 'IdGuia' });
 
-module.exports = { Guia, Parcela };
+module.exports = { Guia, Parcela, ContaBancaria, Usuario, Receita, Pagamento, MovimentacaoFinanceira};
