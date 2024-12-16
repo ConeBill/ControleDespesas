@@ -8,28 +8,49 @@ const sequelize = require('../config/database');
 router.get('/', async (req, res) => {
     try {
         const { idUser } = req.query;
-        if (!idUser ) {
+        if (!idUser) {
             return res.status(400).json({ error: 'IdUsuario é obrigatório' });
         }
 
-        const guias = await sequelize.query(
-            `SELECT * 
+         // Consulta para obter as guias
+         const guias = await sequelize.query(
+            `SELECT G.IdGuia, G.IdOrigem, G.SetorOrigem, G.Descr, SUM(ABS(P.VlrTarifa)) AS VlrTotal
              FROM guias G 
              JOIN parcelas P ON P.IdGuia = G.IdGuia 
              WHERE G.IdOrigem = :idUser
              AND G.SetorOrigem = 'Usuarios'
+             GROUP BY IdGuia, IdOrigem, SetorOrigem, Descr
              ORDER BY G.IdGuia DESC`,
             {
-                replacements: { 
-                    idUser: idUser
-                },
+                replacements: { idUser: idUser },
                 type: QueryTypes.SELECT,
             }
         );
-        res.status(201).json(guias);
+
+        // Consulta para obter as parcelas
+        const parcelas = await sequelize.query(
+            `SELECT P.IdGuia, P.IdParcela, P.NroParcela, P.DtVencimento, P.Situacao, P.VlrTarifa
+             FROM parcelas P
+             WHERE P.IdGuia IN (:idGuias)
+             ORDER BY P.IdGuia, P.NroParcela`,
+            {
+                replacements: { idGuias: guias.map(guia => guia.IdGuia) },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        // Agrupar as parcelas por guia
+        const guiasComParcelas = guias.map(guia => {
+            return {
+                ...guia,
+                parcelas: parcelas.filter(parcela => parcela.IdGuia === guia.IdGuia)
+            };
+        });
+
+        res.status(200).json(guiasComParcelas);
     } catch (error) {
-        console.log('Erro ao buscar guias:', error);
-        res.status(500).json({ error: 'Erro ao buscar guias' });
+        console.log('Erro ao buscar guias ou parcelas:', error);
+        res.status(500).json({ error: 'Erro ao buscar guias ou parcelas' });
     }
 });
 
@@ -52,9 +73,9 @@ router.get('/pagar', async (req, res) => {
              AND P.DtVencimento > :currentDate
              ORDER BY G.IdGuia DESC`,
             {
-                replacements: { 
-                    idUser: idUser, 
-                    currentDate: currentDate 
+                replacements: {
+                    idUser: idUser,
+                    currentDate: currentDate
                 },
                 type: QueryTypes.SELECT,
             }
