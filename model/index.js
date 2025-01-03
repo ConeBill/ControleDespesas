@@ -9,6 +9,7 @@ const MovimentacaoFinanceira = require('./movimentoModel');
 const MovimentoConta = require('./contaMovimentoModel');
 
 
+// Relacionamento entre Guia e Parcela
 Guia.hasMany(Parcela, {
     foreignKey: 'IdGuia',
     as: 'parcelas'
@@ -19,6 +20,7 @@ Parcela.belongsTo(Guia, {
     as: 'guia'
 });
 
+// Relacionamento entre Usuario e ContaBancaria
 Usuario.belongsToMany(ContaBancaria, {
     through: UsuarioConta,
     foreignKey: 'IdOrigem'
@@ -29,6 +31,7 @@ ContaBancaria.belongsToMany(Usuario, {
     foreignKey: 'IdConta' 
 });
 
+// Relacionamento entre Receita e ContaBancaria
 Receita.belongsTo(ContaBancaria, { 
     foreignKey: 'IdConta' 
 });
@@ -37,6 +40,7 @@ ContaBancaria.hasMany(Receita, {
     foreignKey: 'IdConta' 
 });
 
+// Relacionamento entre Pagamento e ContaBancaria
 Pagamento.belongsTo(ContaBancaria, { 
     foreignKey: 'IdConta' 
 });
@@ -61,6 +65,12 @@ MovimentoConta.belongsTo(MovimentacaoFinanceira, {
     foreignKey: 'IdMovimento'
 });
 
+// Relacionamento entre MovimentacaoFinanceira e Parcela
+MovimentacaoFinanceira.belongsTo(Parcela, {
+    foreignKey: 'IdOrigem',
+    as: 'parcela'
+});
+
 module.exports = {
     Guia,
     Parcela,
@@ -68,5 +78,6 @@ module.exports = {
     ContaBancaria,
     Receita,
     Pagamento,
-    MovimentacaoFinanceira
+    MovimentacaoFinanceira,
+    MovimentoConta
 };

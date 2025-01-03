@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { QueryTypes } = require('sequelize');
+const { QueryTypes, INTEGER } = require('sequelize');
 const { Guia, Parcela } = require('../model/index');
 const sequelize = require('../config/database');
 
@@ -12,8 +12,8 @@ router.get('/', async (req, res) => {
             return res.status(400).json({ error: 'IdUsuario é obrigatório' });
         }
 
-         // Consulta para obter as guias
-         const guias = await sequelize.query(
+        // Consulta para obter as guias
+        const guias = await sequelize.query(
             `SELECT G.IdGuia, G.IdOrigem, G.SetorOrigem, G.Descr, SUM(ABS(P.VlrTarifa)) AS VlrTotal
              FROM guias G 
              JOIN parcelas P ON P.IdGuia = G.IdGuia 
@@ -90,54 +90,84 @@ router.get('/pagar', async (req, res) => {
 
 // Adicionar uma nova guia
 router.post('/', async (req, res) => {
-    //Guia
     const Nome = req.body.Descr;
     const IdOrigem = req.body.IdOrigem;
     const SetorOrigem = req.body.SetorOrigem;
-    //Parcelas
     const NroParcela = req.body.NroParcela;
     const DtVencimento = req.body.DtVencimento;
     const Situacao = req.body.Situacao;
-    const VlrTarifa = req.body.VlrTarifa;
+    const VlrTarifa = parseFloat(req.body.VlrTarifa);
+    const VlrJuros = parseFloat(req.body.VlrJuros);
 
-    //Juros caso tenha
-    const VlrJuros = req.body.VlrJuros;
+    // Verificar se VlrTarifa e VlrJuros são números válidos
+    if (isNaN(VlrTarifa)) {
+        return res.status(400).json({ error: 'VlrTarifa inválido' });
+    }
 
+    let novaGuia;
     try {
-        const novaGuia = await Guia.create({
+        // Criar a guia
+        novaGuia = await Guia.create({
             IdOrigem: IdOrigem,
             SetorOrigem: SetorOrigem,
             Descr: Nome
         });
+    } catch (error) {
+        return res.status(400).json({ error: 'Erro ao criar a guia', detalhes: error });
+    }
 
-        if (NroParcela > 1) {
-            let parcelas = [];
-            let valorParcela = VlrTarifa / NroParcela;
-
-            for (let i = 1; i < NroParcela; i++) {
-                let valorComJuros = valorParcela + (valorParcela * (VlrJuros / 100) * i);
-                parcelas.push({
-                    IdGuia: novaGuia.IdGuia,
-                    NroParcela: i + 1,
-                    DtVencimento: new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + i),
-                    Situacao: Situacao,
-                    VlrTarifa: valorComJuros
-                });
-            }
-            await Parcela.bulkCreate(parcelas);
-        } else {
+    try {
+        console.log('Entrou no try');
+        // Verificar e criar parcelas
+        if (NroParcela === 0) {
+            console.log('IdGuia', novaGuia.IdGuia);
             await Parcela.create({
-                GuiaId: novaGuia.id,
-                NroParcela: 1,
+                IdGuia: novaGuia.IdGuia,
+                NroParcela: 0,
                 DtVencimento: DtVencimento,
                 Situacao: Situacao,
                 VlrTarifa: VlrTarifa
             });
+        } else {
+            let parcelas = [];
+            let valorParcela = VlrTarifa / NroParcela;
+
+
+
+            for (let i = 0; i < NroParcela + 1; i++) {
+                if (i === 0) {
+                    parcelas.push({
+                        IdGuia: novaGuia.IdGuia,
+                        NroParcela: 0,
+                        DtVencimento: new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + i),
+                        Situacao: Situacao,
+                        VlrTarifa: VlrTarifa
+                    });
+                } else {
+                    let valorComJuros = valorParcela + (valorParcela * (VlrJuros / 100) * NroParcela);
+                    parcelas.push({
+                        IdGuia: novaGuia.IdGuia,
+                        NroParcela: i,
+                        DtVencimento: new Date(DtVencimento).setMonth(new Date(DtVencimento).getMonth() + i),
+                        Situacao: Situacao,
+                        VlrTarifa: valorComJuros
+                    });
+                }
+            }
+
+            await Parcela.bulkCreate(parcelas);
         }
+
         return res.status(201).json({ message: 'Guia e parcelas criadas com sucesso.' });
     } catch (error) {
-        res.status(400).json({ error: 'Erro ao criar guia ou parcelas', detalhes: error });
+        // Se ocorrer um erro ao criar parcelas, deletar a guia
+        if (novaGuia) {
+            await Guia.destroy({ where: { IdGuia: novaGuia.IdGuia } });
+        }
+
+        return res.status(400).json({ error: 'Erro ao criar parcelas', detalhes: error });
     }
 });
+
 
 module.exports = router;

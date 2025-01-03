@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const UsuarioConta = require('../model/usuarioContaModel');
 const MovimentacaoFinanceira = require('../model/movimentoModel');
+const Parcela = require('../model/parcelaModel');
+const Guia = require('../model/guiaModel');
 
 // Rota para adicionar uma receita
 router.post('/add', async (req, res) => {
@@ -34,7 +36,8 @@ router.post('/add', async (req, res) => {
             tipoMovimentacao: 'receita',
             SetorOrigem: 'Usuarios',
             IdOrigem: IdOrigem,
-            IdConta: IdConta
+            IdConta: IdConta,
+            UsrIsert: IdOrigem
         });
 
         // Atualiza o saldo na conta do usuário
@@ -51,13 +54,13 @@ router.post('/add', async (req, res) => {
 });
 
 router.post('/pagamento', async (req, res) => {
-    const IdConta = req.body.IdConta;
-    const IdOrigem = req.body.IdOrigem;
-    const VlrPagamento = req.body.VlrPagamento;
-    const DtPagamento = req.body.DtPagamento;
-    const IdParcela = req.body.IdParcela;
+    const IdConta = req.body.conta;
+    const UsrIsert = req.body.idUser;
+    const VlrPagamento = req.body.valorPago;
+    const DtPagamento = req.body.dataPagamento;
+    const IdOrigem = req.body.idParcela;
 
-    if (!IdConta || !IdOrigem || !VlrPagamento || !IdParcela) {
+    if (!IdConta || !IdOrigem || !VlrPagamento) {
         return res.status(400).json({ error: 'Todos os campos (IdConta, IdOrigem e valorPagamento) são obrigatórios.' });
     }
 
@@ -66,14 +69,14 @@ router.post('/pagamento', async (req, res) => {
         const usuarioConta = await UsuarioConta.findOne({
             where: {
                 IdConta,
-                IdOrigem
+                IdOrigem: UsrIsert
             }
         });
 
         if (!usuarioConta) {
             return res.status(404).json({ error: 'Conta não encontrada para o usuário.' });
         }
-
+        
         // Cria uma nova movimentação financeira de pagamento
         await MovimentacaoFinanceira.create({
             valorMovimentacao: parseFloat(VlrPagamento),
@@ -82,7 +85,8 @@ router.post('/pagamento', async (req, res) => {
             dataPagamento: DtPagamento,
             IdConta: IdConta,
             SetorOrigem: 'Parcelas',
-            IdOrigem: IdParcela
+            IdOrigem: IdOrigem,
+            UsrIsert: UsrIsert
         });
 
         // Atualiza o saldo na conta do usuário (subtraindo o valor do pagamento)
@@ -96,6 +100,37 @@ router.post('/pagamento', async (req, res) => {
         console.error('Erro ao registrar pagamento:', error);
         return res.status(500).json({ error: 'Erro ao registrar o pagamento', detalhes: error });
     }
+});
+
+// Rota para buscar o extrato de movimentações financeiras de um usuário
+router.get('/extrato', async (req, res) => {
+    const idUser = req.query.idUser;
+
+    console.log(idUser);
+
+    //try {
+        const extrato = await MovimentacaoFinanceira.findAll({
+            where: {
+                UsrIsert: idUser
+            },
+            include: {
+                model: Parcela,
+                as: 'parcela',
+                attributes: ['NroParcela', 'DtVencimento'],
+                include: {
+                    model: Guia,
+                    as: 'guia',
+                    attributes: ['Descr']
+                }
+            }
+        });
+
+        return res.status(200).json(extrato);
+
+    //} catch (error) {
+    //    console.error('Erro ao buscar extrato:', error);
+    //    return res.status(500).json({ error: 'Erro ao buscar extrato', detalhes: error });
+    //}
 });
 
 module.exports = router;

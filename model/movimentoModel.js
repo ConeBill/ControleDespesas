@@ -29,6 +29,10 @@ const MovimentacaoFinanceira = sequelize.define('MovimentacaoFinanceira', {
     tipoMovimentacao: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    UsrIsert: {
+        type: DataTypes.INTEGER,
+        allowNull: false
     }
 });
 
